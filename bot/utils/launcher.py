@@ -8,7 +8,7 @@ from bot.config import settings
 from bot.utils import logger
 from bot.core.tapper import run_tapper
 from bot.core.registrator import register_sessions
-from bot.utils.scripts import get_session_names, get_proxies
+from bot.utils.scripts import get_session_names
 
 banner = """
 
@@ -45,14 +45,19 @@ async def get_tg_clients() -> list[Client]:
     if not session_names:
         raise FileNotFoundError("Not found session files")
 
-    if not settings.API_ID or not settings.API_HASH:
-        raise ValueError("API_ID and API_HASH not found in the .env file.")
+    # Membaca query_id dari file query.txt
+    try:
+        with open('query.txt', 'r') as file:
+            query_id = int(file.readline().strip())  # Pastikan query_id adalah integer jika perlu
+    except FileNotFoundError:
+        raise FileNotFoundError("File 'query.txt' tidak ditemukan. Pastikan file ini ada di direktori yang benar.")
+    except ValueError:
+        raise ValueError("query_id dalam 'query.txt' tidak valid. Pastikan ini adalah angka.")
 
     tg_clients = [
         Client(
             name=session_name,
-            api_id=settings.API_ID,
-            api_hash=settings.API_HASH,
+            api_id=query_id,
             workdir="sessions/",
             plugins=dict(root="bot/plugins"),
         )
@@ -68,7 +73,7 @@ async def process() -> None:
 
     print(banner)
 
-    logger.info(f"Detected {len(get_session_names())} sessions | {len(get_proxies())} proxies")
+    logger.info(f"Detected {len(get_session_names())} sessions")
 
     action = parser.parse_args().action
 
@@ -90,26 +95,20 @@ async def process() -> None:
         await register_sessions()
     elif action == 2:
         tg_clients = await get_tg_clients()
-
         await run_tasks(tg_clients=tg_clients)
     elif action == 3:
         tg_clients = await get_tg_clients()
-
         logger.info("Send /help command in Saved Messages\n")
-
         await compose(tg_clients)
 
 
 async def run_tasks(tg_clients: list[Client]):
-    proxies = get_proxies()
-    proxies_cycle = cycle(proxies) if proxies else None
     lock = asyncio.Lock()
 
     tasks = [
         asyncio.create_task(
             run_tapper(
                 tg_client=tg_client,
-                proxy=next(proxies_cycle) if proxies_cycle else None,
                 lock=lock,
             )
         )
