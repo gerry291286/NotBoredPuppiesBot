@@ -1,18 +1,9 @@
 import os
 import glob
-import time
-import random
-import shutil
 import asyncio
-import pathlib
 from typing import Union
-
 from pyrogram import Client
 from pyrogram.types import Message
-from better_proxy import Proxy
-from multiprocessing import Queue
-
-from bot.config import settings
 from bot.utils import logger
 from bot.utils.emojis import num, StaticEmoji
 
@@ -22,18 +13,12 @@ def get_session_names() -> list[str]:
     session_names = [
         os.path.splitext(os.path.basename(file))[0] for file in session_names
     ]
-
     return session_names
 
 
-def get_proxies() -> list[Proxy]:
-    if settings.USE_PROXY_FROM_FILE:
-        with open(file="bot/config/proxies.txt", encoding="utf-8-sig") as file:
-            proxies = [Proxy.from_str(proxy=row.strip()).as_url for row in file]
-    else:
-        proxies = []
-
-    return proxies
+def get_proxies() -> list:
+    # Mengembalikan daftar kosong karena proxy tidak digunakan
+    return []
 
 
 def get_command_args(
@@ -61,9 +46,7 @@ def with_args(text: str):
                 await message.edit(f"<emoji id=5210952531676504517>❌</emoji>{text}")
             else:
                 return await func(client, message)
-
         return wrapped
-
     return decorator
 
 
